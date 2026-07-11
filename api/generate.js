@@ -114,8 +114,7 @@ async function callOpenAI({ imageBase64, mediaType, systemPrompt }) {
 async function callGemini({ imageBase64, mediaType, systemPrompt }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY belum di-set di Environment Variables.');
- const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
+ const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
