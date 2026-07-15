@@ -54,6 +54,9 @@
   .go-btn{font-family:'Archivo Black', sans-serif;background:var(--marker-coral);color:#fff;border:2.5px solid var(--line);border-radius:12px;padding:14px 22px;font-size:16px;cursor:pointer;box-shadow:4px 4px 0 var(--line);transition:transform .08s ease, box-shadow .08s ease;width:100%;}
   .go-btn:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line);}
   .go-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:4px 4px 0 var(--line);}
+  .regen-btn{border:2px solid var(--line);background:var(--marker-yellow);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .regen-btn:hover{background:#FFE868;}
+  .regen-btn:disabled{opacity:.5;cursor:not-allowed;}
   .status{font-size:14px;color:var(--muted);margin-top:10px;min-height:20px;}
   .results{display:flex;flex-direction:column;gap:20px;}
   .note{background:var(--card);border:2.5px solid var(--line);border-radius:4px 4px 14px 14px;padding:20px 20px 16px;position:relative;box-shadow:5px 5px 0 rgba(25,23,20,0.15);}
@@ -91,16 +94,10 @@
         <img id="previewImg" alt="preview produk">
       </div>
       <div class="options">
-        <div class="opt-label">AI Provider</div>
-        <div class="chip-row" id="providerChips">
-          <button class="chip active" data-provider="anthropic">🟠 Claude</button>
-          <button class="chip" data-provider="openai">🟢 GPT</button>
-          <button class="chip" data-provider="gemini">🔵 Gemini</button>
-        </div>
         <div class="opt-label">Gaya caption</div>
         <div class="chip-row" id="styleChips">
           <button class="chip active" data-style="heboh">🔥 Heboh</button>
-          <button class="chip" data-style="santai">😌 Santai</button>
+          <button class="chip" data-style="tiktok">🎵 TikTok Style</button>
           <button class="chip" data-style="formal">🧾 Formal</button>
           <button class="chip" data-style="simple">✏️ Simple</button>
           <button class="chip" data-style="ads">📢 Ads Style</button>
@@ -112,7 +109,10 @@
   </div>
 
   <div class="panel" id="resultsPanel">
-    <div class="opt-label" style="margin-bottom:14px;">Hasil caption</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="opt-label" style="margin-bottom:0;">Hasil caption</div>
+      <button class="regen-btn" id="regenBtn" style="display:none;">🔄 Generate Ulang</button>
+    </div>
     <div class="results" id="results">
       <div class="empty">Belum ada caption. Upload foto dulu, king 👆</div>
     </div>
@@ -125,22 +125,13 @@
 let uploadedBase64 = null;
 let uploadedMediaType = null;
 let selectedStyle = 'heboh';
-let selectedProvider = 'anthropic';
-
-const providerChips = document.getElementById('providerChips');
-providerChips.addEventListener('click', e => {
-  const btn = e.target.closest('.chip');
-  if (!btn) return;
-  [...providerChips.children].forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  selectedProvider = btn.dataset.provider;
-});
 
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const previewRow = document.getElementById('previewRow');
 const previewImg = document.getElementById('previewImg');
 const genBtn = document.getElementById('genBtn');
+const regenBtn = document.getElementById('regenBtn');
 const statusText = document.getElementById('statusText');
 const resultsDiv = document.getElementById('results');
 const styleChips = document.getElementById('styleChips');
@@ -205,6 +196,7 @@ async function handleFile(file){
     uploadedBase64 = dataUrl.split(',')[1];
     previewImg.src = dataUrl;
     previewRow.style.display = 'flex';
+    regenBtn.style.display = 'none';
     resultsDiv.innerHTML = '<div class="empty">Klik "Generate 3 Caption" untuk mulai ✨</div>';
   } catch (err) {
     console.error(err);
@@ -212,11 +204,11 @@ async function handleFile(file){
   }
 }
 
-genBtn.addEventListener('click', async () => {
+async function generateCaptions(){
   if (!uploadedBase64) return;
   genBtn.disabled = true;
+  regenBtn.disabled = true;
   statusText.textContent = 'AI lagi ngintip fotonya dan meracik caption...';
-  resultsDiv.innerHTML = '';
 
   try {
     const response = await fetch('/api/generate', {
@@ -225,8 +217,7 @@ genBtn.addEventListener('click', async () => {
       body: JSON.stringify({
         imageBase64: uploadedBase64,
         mediaType: uploadedMediaType,
-        style: selectedStyle,
-        provider: selectedProvider
+        style: selectedStyle
       })
     });
 
@@ -240,6 +231,7 @@ genBtn.addEventListener('click', async () => {
     }
 
     renderResults(data.captions);
+    regenBtn.style.display = 'inline-block';
     statusText.textContent = 'Selesai! Pilih yang paling nendang 👇';
   } catch (err) {
     console.error(err);
@@ -247,7 +239,18 @@ genBtn.addEventListener('click', async () => {
     resultsDiv.innerHTML = `<div class="empty">Terjadi kesalahan saat menghasilkan caption.<br>${escapeHtml(err.message)}<br><br>Coba klik Generate lagi.</div>`;
   } finally {
     genBtn.disabled = false;
+    regenBtn.disabled = false;
   }
+}
+
+genBtn.addEventListener('click', () => {
+  resultsDiv.innerHTML = '';
+  regenBtn.style.display = 'none';
+  generateCaptions();
+});
+
+regenBtn.addEventListener('click', () => {
+  generateCaptions();
 });
 
 function renderResults(captions){
